@@ -18,11 +18,12 @@ void setup() {
 }
 
 void loop() {
+  /*
   lcd.setCursor(0, 1);
   // print the number of seconds since reset:
   int curTime = millis() / 1000;
   lcd.print(curTime);
-  
+  */
   /*
   if (!buz_state && curTime % 5 == 0) {
     tone(buz, 1000);
@@ -32,11 +33,31 @@ void loop() {
     buz_state = false;
   }
   */
-
-  lcd.setCursor(0, 0);
+  lcd.setCursor(0, 1);
   lcd.print(readPot());
 }
 
 int readPot() {
-  return analogRead(pot);
+  int val = analogRead(pot);
+  
+  if (val >= 800) {
+    return 5;
+  } else if (val >= 600) {
+    return 4;
+  } else if (val >= 400) {
+    return 3;
+  } else if (val >= 200){
+    return 2;
+  } else {
+    return 1;
+  }
+}
+
+// clears a single line (row) on the LCD
+void clearLine(int line) {
+  int columns = 16;
+  lcd.setCursor(0, line);
+  for(int i=0; i < columns; i++) {
+    lcd.print(" ");
+  }
 }
