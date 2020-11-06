@@ -13,7 +13,8 @@
 #define STATE_SETUP2 2
 #define STATE_ROUND 3
 #define STATE_REST 4
-#define STATE_PAUSE 5
+#define STATE_ROUND_PAUSE 5
+#define STATE_REST_PAUSE 6
 
 int state = STATE_SETUP0;
 
@@ -53,6 +54,10 @@ void setup() {
   // initialize pushbuttons
   pinMode(butGPin, INPUT_PULLUP);
   pinMode(butRPin, INPUT_PULLUP);
+
+  // serial setup
+  Serial.begin(9600);
+  Serial.println("Setup Complete.");
 }
 
 void loop() {
@@ -70,7 +75,7 @@ void loop() {
     case STATE_SETUP0:
       switch (pot) {
         case 0:
-          secRound = 30;
+          secRound = 5;
           break;
         case 1:
           secRound = 60;
@@ -178,15 +183,14 @@ void loop() {
           break;
       }
 
-      // displayRoundMax();
-      lcd.setCursor(0,1);
-      lcd.print("ROUND 1");
+      displayRoundMax();
       
       // continue condition
       if (butGPosedge) {
         state = STATE_ROUND;
         roundCur = 1;
         displayState();
+        Serial.println("Start!");
         msStart = millis();
       }
       // return condition
@@ -201,26 +205,43 @@ void loop() {
       updateTime(secRound);
       displayTime(secRemain);
 
-      /*
       // rest condition
       if (secRemain <= 0) {
-        state = STATE_SETUP0;
+        state = STATE_REST;
         displayState();
+        msStart = millis();
       }
-      
-      // pause condition
-      else */
-      if (butRPosedge) {
-        state = STATE_PAUSE;
+      else if (butRPosedge) {
+        state = STATE_ROUND_PAUSE;
         displayState();
+        Serial.println(secRemain);
       }
       
       break;
       
-    case STATE_PAUSE:
+    case STATE_REST:
+      updateTime(secRest);
+      displayTime(secRemain);
+      
+      // round condition
+      if (secRemain <= 0) {
+        state = STATE_ROUND;
+        roundCur++;
+        displayState();
+        msStart = millis();
+      }
+      else if (butRPosedge) {
+        state = STATE_REST_PAUSE;
+        displayState();
+        Serial.println(secRemain);
+      }
+      
+      break;
+      
+    case STATE_ROUND_PAUSE:
       lcd.setCursor(11, 1);
       lcd.print("CONF");
-      /*
+      
       // resume condition
       if (butGPosedge) {
         state = STATE_ROUND;
@@ -233,7 +254,26 @@ void loop() {
         state = STATE_SETUP0;
         displayState();
       }
-      */
+      
+      break;
+
+    case STATE_REST_PAUSE:
+      lcd.setCursor(11, 1);
+      lcd.print("CONF");
+      
+      // resume condition
+      if (butGPosedge) {
+        state = STATE_REST;
+        displayState();
+        secRest = secRemain;
+        msStart = millis();
+      }
+      // finish condition
+      else if (butRPosedge) {
+        state = STATE_SETUP0;
+        displayState();
+      }
+      
       break;
       
     default:
@@ -350,7 +390,7 @@ void displayRoundMax() {
 void displayState() {
   lcd.clear();
 
-  char buff[13];
+  static char buff[16];
   
   switch (state){
     case STATE_SETUP0:
@@ -366,10 +406,21 @@ void displayState() {
       sprintf(buff, "Round %2i / %-2i", roundCur, roundMax);
       lcd.print(buff);
       break;
-    case STATE_PAUSE:
+    case STATE_REST:
+      sprintf(buff, "Rest %2i -> %-2i/%2i ", roundCur, roundCur + 1, roundMax);
+      lcd.print(buff);
+      break;
+    case STATE_ROUND_PAUSE:
       sprintf(buff, "Round %2i / %-2i", roundCur, roundMax);
       lcd.print(buff);
-      displayTime(secRemain);
+      // displayTime(secRemain);
+      lcd.setCursor(5, 1);
+      lcd.print("PAUSED");
+      break;
+    case STATE_REST_PAUSE:
+      sprintf(buff, "Rest %2i -> %-2i/%2i ", roundCur, roundCur + 1, roundMax);
+      lcd.print(buff);
+      // displayTime(secRemain);
       lcd.setCursor(5, 1);
       lcd.print("PAUSED");
       break;
