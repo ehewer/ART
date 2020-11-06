@@ -17,11 +17,11 @@ This project is still in progress but close to completion!
 - [ ] buzzer integration (signal beginning/end of rounds)
 - [ ] wiring diagram
 - [ ] general debugging
-- [ ] comprehensive README
+- [ ] comprehensive README (or wiki)
 
 ##  What comes after?
+- LED integration?
 - Remote control?
 - Voice control?
 - Louder speakers?
 - Taking over the UFC Performance Institute?
-
