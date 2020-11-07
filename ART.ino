@@ -55,12 +55,6 @@ void setup() {
   // initialize pushbuttons
   pinMode(butGPin, INPUT_PULLUP);
   pinMode(butRPin, INPUT_PULLUP);
-
-  /*
-  // serial setup for debugging
-  Serial.begin(9600);
-  Serial.println("Setup Complete.");
-  */
 }
 
 void loop() {
@@ -80,7 +74,7 @@ void loop() {
       if (pot != lastVal) {
         switch (pot) {
         case 0:
-          secRound = 5;
+          secRound = 30;
           break;
         case 1:
           secRound = 60;
@@ -208,7 +202,14 @@ void loop() {
       if (posedge[0]) {
         state = STATE_ROUND;
         roundCur = 1;
+        
+        // give brief setup time
+        lcd.clear();
+        lcd.print("Get Ready...");
+        delay(3000);
+        
         displayState();
+        buzzOnce();
         msStart = millis();
       }
       // return condition
@@ -230,9 +231,23 @@ void loop() {
 
       // rest condition
       if (secRemain <= 0) {
-        state = STATE_REST;
-        displayState();
-        msStart = millis();
+        if (roundCur == roundMax) {
+          state = STATE_SETUP0;
+
+          // signal end of activity
+          lcd.clear();
+          lcd.print("Complete!");
+          buzzThrice();
+          delay(2000);
+          
+          displayState();
+          lastVal = -1;
+        } else {
+          state = STATE_REST;
+          displayState();
+          buzzThrice();
+          msStart = millis();
+        }
       }
       else if (posedge[1]) {
         state = STATE_ROUND_PAUSE;
@@ -251,6 +266,7 @@ void loop() {
         state = STATE_ROUND;
         roundCur++;
         displayState();
+        buzzOnce();
         msStart = millis();
       }
       else if (posedge[1]) {
@@ -345,6 +361,8 @@ int readPot() {
 
 // Detects posedges on pushbuttons with debounce
 // Tracks changes in input and time since last function call
+// Input: an array containing two bool values
+// Ouput: updates the input array to reflect posedges (no return value)
 void updatePosedge(bool posedge[2]) {
   int butG = digitalRead(butGPin);
   int butR = digitalRead(butRPin);
@@ -412,29 +430,33 @@ void displayRoundMax() {
  * 
  * NOTE: successive calls to lcd.print() is faster
  * & more efficient than concatenating multiple strings
+ * 
+ * Previously used buffers to save lines of code, but
+ * ran into memory issues
  */
 void displayState() {
   lcd.clear();
-
-  // char buff[16]; BUFFER NO LONGER USED, MEMORY ISSUES
   
   switch (state){
     case STATE_SETUP0:
       lcd.print("Round time:");
       break;
+      
     case STATE_SETUP1:
       lcd.print("Rest time:");
       break;
+      
     case STATE_SETUP2:
       lcd.print("# of Rounds:");
       break;
+      
     case STATE_ROUND:
       lcd.print("Round ");
       lcd.print(roundCur);
       lcd.print(" / ");
       lcd.print(roundMax);
-
       break;
+      
     case STATE_REST:
       lcd.print("Rest ");
       lcd.print(roundCur);
@@ -442,8 +464,8 @@ void displayState() {
       lcd.print(roundCur + 1);
       lcd.print("/");
       lcd.print(roundMax);
-      
       break;
+      
     case STATE_ROUND_PAUSE:
       lcd.print("Round ");
       lcd.print(roundCur);
@@ -455,6 +477,7 @@ void displayState() {
       lcd.setCursor(5, 1);
       lcd.print("PAUSED");
       break;
+      
     case STATE_REST_PAUSE:
       lcd.print("Rest ");
       lcd.print(roundCur);
@@ -468,8 +491,28 @@ void displayState() {
       lcd.setCursor(5, 1);
       lcd.print("PAUSED");
       break;
+      
     default:
       break;
+  }
+}
+
+// plays a single long buzz
+// NOTE: uses delay()
+void buzzOnce() {
+  tone(buzPin, 1000);
+  delay(1000);
+  noTone(buzPin);
+}
+
+// plays a three short buzzes
+// NOTE: uses delay()
+void buzzThrice() {
+  for (int i = 0; i < 3; i++) {
+    tone(buzPin, 1000);
+    delay(150);
+    noTone(buzPin);
+    delay(50);
   }
 }
 
