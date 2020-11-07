@@ -26,15 +26,12 @@ LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 const int buzPin = 9;
 bool buz_state = false;
 
-// pot pin
+// pot pin (analogue)
 const int potPin = 0;
 
 // button pins
 const int butGPin = 7;
 const int butRPin = 6;
-// posedge detection
-bool butGPosedge = false;
-bool butRPosedge = false;
 // debounce variables
 const unsigned long msBounce = 30; // duration of debounce in ms
 
@@ -46,6 +43,10 @@ int roundCur;
 int roundMax;
 unsigned long msStart;
 
+// track last displayed value for changes to trigger LCD updates
+// set lastVal outside of appropriate range to guarantee LCD update
+int lastVal = -1;
+
 void setup() {
   // LCD setup
   lcd.begin(16, 2);
@@ -55,9 +56,11 @@ void setup() {
   pinMode(butGPin, INPUT_PULLUP);
   pinMode(butRPin, INPUT_PULLUP);
 
-  // serial setup
+  /*
+  // serial setup for debugging
   Serial.begin(9600);
   Serial.println("Setup Complete.");
+  */
 }
 
 void loop() {
@@ -66,14 +69,16 @@ void loop() {
   // we only want to print on transition - uses less resources
   
   // read from inputs
-  updatePosedge();
+  bool posedge[] = {false, false}; // posedge[0] = green pushbutton, posedge[1] = red pushbutton
+  updatePosedge(posedge);
   int pot = readPot();
   
   // FSM
   switch (state) {
-    // Round time
+    // set round time
     case STATE_SETUP0:
-      switch (pot) {
+      if (pot != lastVal) {
+        switch (pot) {
         case 0:
           secRound = 5;
           break;
@@ -98,109 +103,127 @@ void loop() {
         default:
           secRound = 0;
           break;
+        }
+
+        displayTime(secRound);
       }
-
-      displayTime(secRound);
-
+      
       // continue condition
-      if (butGPosedge) {
+      if (posedge[0]) {
         state = STATE_SETUP1;
         displayState();
+        pot = -1;
       }
+
+      // update last pot value
+      lastVal = pot;
       
       break;
 
-    // Rest time
+    // set rest time
     case STATE_SETUP1:
-      switch (pot) {
-        case 0:
-          secRest = 15;
-          break;
-        case 1:
-          secRest = 30;
-          break;
-        case 2:
-          secRest = 45;
-          break;
-        case 3:
-          secRest = 60;
-          break;
-        case 4:
-          secRest = 75;
-          break;
-        case 5:
-          secRest = 90;
-          break;
-        case 6:
-          secRest = 120;
-          break;
-        default:
-          secRest = 0;
-          break;
+      if (pot != lastVal) {
+        switch (pot) {
+          case 0:
+            secRest = 15;
+            break;
+          case 1:
+            secRest = 30;
+            break;
+          case 2:
+            secRest = 45;
+            break;
+          case 3:
+            secRest = 60;
+            break;
+          case 4:
+            secRest = 75;
+            break;
+          case 5:
+            secRest = 90;
+            break;
+          case 6:
+            secRest = 120;
+            break;
+          default:
+            secRest = 0;
+            break;
+        }
+
+        displayTime(secRest);
       }
-      
-      displayTime(secRest);
 
       // continue condition
-      if (butGPosedge) {
+      if (posedge[0]) {
         state = STATE_SETUP2;
         displayState();
+        pot = -1;
       }
       // return condition
-      else if (butRPosedge) {
+      else if (posedge[1]) {
         state = STATE_SETUP0;
         displayState();
+        pot = -1;
       }
+
+      // update last pot value
+      lastVal = pot;
       
       break;
 
-    // # of Rounds
+    // set # of rounds
     case STATE_SETUP2:
-      switch (pot) {
-        case 0:
-          roundMax = 1;
-          break;
-        case 1:
-          roundMax = 3;
-          break;
-        case 2:
-          roundMax = 4;
-          break;
-        case 3:
-          roundMax = 6;
-          break;
-        case 4:
-          roundMax = 9;
-          break;
-        case 5:
-          roundMax = 12;
-          break;
-        case 6:
-          roundMax = 99;
-          break;
-        default:
-          roundMax = 0;
-          break;
-      }
+      if (pot != lastVal) {
+        switch (pot) {
+          case 0:
+            roundMax = 1;
+            break;
+          case 1:
+            roundMax = 3;
+            break;
+          case 2:
+            roundMax = 4;
+            break;
+          case 3:
+            roundMax = 6;
+            break;
+          case 4:
+            roundMax = 9;
+            break;
+          case 5:
+            roundMax = 12;
+            break;
+          case 6:
+            roundMax = 99;
+            break;
+          default:
+            roundMax = 0;
+            break;
+        }
 
-      displayRoundMax();
+        displayRoundMax();
+      }
       
       // continue condition
-      if (butGPosedge) {
+      if (posedge[0]) {
         state = STATE_ROUND;
         roundCur = 1;
         displayState();
-        Serial.println("Start!");
         msStart = millis();
       }
       // return condition
-      else if (butRPosedge) {
+      else if (posedge[1]) {
         state = STATE_SETUP1;
         displayState();
+        pot = -1;
       }
+
+      // update last pot value
+      lastVal = pot;
       
       break;
-      
+
+    // active round
     case STATE_ROUND:
       updateTime(secRound);
       displayTime(secRemain);
@@ -211,14 +234,14 @@ void loop() {
         displayState();
         msStart = millis();
       }
-      else if (butRPosedge) {
+      else if (posedge[1]) {
         state = STATE_ROUND_PAUSE;
         displayState();
-        Serial.println(secRemain);
       }
       
       break;
-      
+
+    // active rest period
     case STATE_REST:
       updateTime(secRest);
       displayTime(secRemain);
@@ -230,53 +253,51 @@ void loop() {
         displayState();
         msStart = millis();
       }
-      else if (butRPosedge) {
+      else if (posedge[1]) {
         state = STATE_REST_PAUSE;
         displayState();
-        Serial.println(secRemain);
       }
       
       break;
-      
+
+    // round paused
     case STATE_ROUND_PAUSE:
-      lcd.setCursor(11, 1);
-      lcd.print("CONF");
-      
       // resume condition
-      if (butGPosedge) {
+      if (posedge[0]) {
         state = STATE_ROUND;
         displayState();
         secRound = secRemain;
         msStart = millis();
       }
       // finish condition
-      else if (butRPosedge) {
+      else if (posedge[1]) {
         state = STATE_SETUP0;
         displayState();
+        lastVal = -1;
       }
       
       break;
 
-    case STATE_REST_PAUSE:
-      lcd.setCursor(11, 1);
-      lcd.print("CONF");
-      
+    // rest period paused
+    case STATE_REST_PAUSE:  
       // resume condition
-      if (butGPosedge) {
+      if (posedge[0]) {
         state = STATE_REST;
         displayState();
         secRest = secRemain;
         msStart = millis();
       }
       // finish condition
-      else if (butRPosedge) {
+      else if (posedge[1]) {
         state = STATE_SETUP0;
         displayState();
+        lastVal = -1;
       }
       
       break;
       
     default:
+      /*
       switch (pot) {
         case 0:
           break;
@@ -295,6 +316,7 @@ void loop() {
         default:
           break;
       }
+      */
       break;
   }
 }
@@ -322,7 +344,8 @@ int readPot() {
 }
 
 // Detects posedges on pushbuttons with debounce
-void updatePosedge() {
+// Tracks changes in input and time since last function call
+void updatePosedge(bool posedge[2]) {
   int butG = digitalRead(butGPin);
   int butR = digitalRead(butRPin);
   static int butGLast = LOW;
@@ -333,64 +356,81 @@ void updatePosedge() {
   // if falling edge, update time of last fall
   if (butG == LOW && butGLast == HIGH) {
     msGLast = millis();
-    butGPosedge = false;
   }
   // if rising edge, check time since last fall
   else if (butG == HIGH && butGLast == LOW && (millis() - msGLast > msBounce)) {
-    butGPosedge = true;
-  } else {
-    butGPosedge = false;
+    posedge[0] = true;
   }
 
   // if falling edge, update time of last fall
   if (butR == LOW && butRLast == HIGH) {
     msRLast = millis();
-    butRPosedge = false;
   }
   // if rising edge, check time since last fall
   else if (butR == HIGH && butRLast == LOW && (millis() - msRLast > msBounce)) {
-    butRPosedge = true;
-  } else {
-    butRPosedge = false;
+    posedge[1] = true;
   }
-  
+
+  // update last button value
   butGLast = butG;
   butRLast = butR;
 }
 
 // Decrements global variable "secRemain" approximately every second
 // Uses unsigned long to handle millis() rollover
-// Input: duration of round or rest in seconds
+// Input: duration of time period in seconds
 void updateTime(int duration) { 
   unsigned long msCur = millis();
   secRemain = duration - ((msCur - msStart) / 1000);
 }
 
-// Displays input on second line of LCD in M:SS format
-// Input: seconds to display
+// Displays time in M:SS format on second line of LCD 
+// Input: time in seconds
 void displayTime(int sec) {
+  /* OLD METHOD - MEMORY ISSUES
   char buff[4];
-  sprintf(buff, "%i:%02i", sec / 60, sec % 60);
+  snprintf(buff, 4, "%i:%02i", sec / 60, sec % 60);
 
   lcd.setCursor(0,1);
   lcd.print(buff);
+  */
+  lcd.setCursor(0, 1);
+  lcd.print(sec / 60);
+  lcd.print(":");
+  int mod = sec % 60;
+  if (mod < 10) 
+    lcd.print("0");
+  lcd.print(mod);
 }
 
 // Displays max round on second line of LCD
 void displayRoundMax() {
-  char bu[5];
-  sprintf(bu, "%-2i", roundMax);
+  /* OLD METHOD - MEMORY ISSUES
+  char buff[2];
+  snprintf(buff, 2, "%-2i", roundMax);
 
   lcd.setCursor(0, 1);
-  lcd.print(bu);
+  lcd.print(buff);
+  */
+  // erase old round (may be a difference in digits)
+  lcd.setCursor(0, 1);
+  lcd.print("  ");
+  // write new round
+  lcd.setCursor(0, 1);
+  lcd.print(roundMax);
 }
 
-// Displays the appropriate message on the first line of LCD
-// based on the current state (if appropriate);
+/* 
+ * Displays the appropriate message on the LCD 
+ * based on the current state (if appropriate)
+ * 
+ * NOTE: successive calls to lcd.print() is faster
+ * & more efficient than concatenating multiple strings
+ */
 void displayState() {
   lcd.clear();
 
-  static char buff[16];
+  // char buff[16]; BUFFER NO LONGER USED, MEMORY ISSUES
   
   switch (state){
     case STATE_SETUP0:
@@ -403,24 +443,58 @@ void displayState() {
       lcd.print("# of Rounds:");
       break;
     case STATE_ROUND:
-      sprintf(buff, "Round %2i / %-2i", roundCur, roundMax);
+      /* OLD METHOD - MEMORY ISSUES
+      snprintf(buff, 16, "Round %2i / %-2i", roundCur, roundMax);
       lcd.print(buff);
+      */
+      lcd.print("Round ");
+      lcd.print(roundCur);
+      lcd.print(" / ");
+      lcd.print(roundMax);
+
       break;
     case STATE_REST:
-      sprintf(buff, "Rest %2i -> %-2i/%2i ", roundCur, roundCur + 1, roundMax);
+      /* OLD METHOD - MEMORY ISSUES
+      snprintf(buff, 16, "Rest %2i -> %-2i/%2i ", roundCur, roundCur + 1, roundMax);
       lcd.print(buff);
+      */
+      lcd.print("Rest ");
+      lcd.print(roundCur);
+      lcd.print(" -> ");
+      lcd.print(roundCur + 1);
+      lcd.print("/");
+      lcd.print(roundMax);
+      
       break;
     case STATE_ROUND_PAUSE:
-      sprintf(buff, "Round %2i / %-2i", roundCur, roundMax);
+      /* OLD METHOD - MEMORY ISSUES
+      snprintf(buff, 16, "Round %2i / %-2i", roundCur, roundMax);
       lcd.print(buff);
-      // displayTime(secRemain);
+      */
+      lcd.print("Round ");
+      lcd.print(roundCur);
+      lcd.print(" / ");
+      lcd.print(roundMax);
+      
+      displayTime(secRemain);
+      
       lcd.setCursor(5, 1);
       lcd.print("PAUSED");
       break;
     case STATE_REST_PAUSE:
-      sprintf(buff, "Rest %2i -> %-2i/%2i ", roundCur, roundCur + 1, roundMax);
+      /* OLD METHOD - MEMORY ISSUES
+      snprintf(buff, 16, "Rest %2i -> %-2i/%2i ", roundCur, roundCur + 1, roundMax);
       lcd.print(buff);
-      // displayTime(secRemain);
+      */
+      lcd.print("Rest ");
+      lcd.print(roundCur);
+      lcd.print(" -> ");
+      lcd.print(roundCur + 1);
+      lcd.print("/");
+      lcd.print(roundMax);
+      
+      displayTime(secRemain);
+      
       lcd.setCursor(5, 1);
       lcd.print("PAUSED");
       break;
