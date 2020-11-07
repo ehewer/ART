@@ -387,13 +387,6 @@ void updateTime(int duration) {
 // Displays time in M:SS format on second line of LCD 
 // Input: time in seconds
 void displayTime(int sec) {
-  /* OLD METHOD - MEMORY ISSUES
-  char buff[4];
-  snprintf(buff, 4, "%i:%02i", sec / 60, sec % 60);
-
-  lcd.setCursor(0,1);
-  lcd.print(buff);
-  */
   lcd.setCursor(0, 1);
   lcd.print(sec / 60);
   lcd.print(":");
@@ -405,13 +398,6 @@ void displayTime(int sec) {
 
 // Displays max round on second line of LCD
 void displayRoundMax() {
-  /* OLD METHOD - MEMORY ISSUES
-  char buff[2];
-  snprintf(buff, 2, "%-2i", roundMax);
-
-  lcd.setCursor(0, 1);
-  lcd.print(buff);
-  */
   // erase old round (may be a difference in digits)
   lcd.setCursor(0, 1);
   lcd.print("  ");
@@ -443,10 +429,6 @@ void displayState() {
       lcd.print("# of Rounds:");
       break;
     case STATE_ROUND:
-      /* OLD METHOD - MEMORY ISSUES
-      snprintf(buff, 16, "Round %2i / %-2i", roundCur, roundMax);
-      lcd.print(buff);
-      */
       lcd.print("Round ");
       lcd.print(roundCur);
       lcd.print(" / ");
@@ -454,10 +436,6 @@ void displayState() {
 
       break;
     case STATE_REST:
-      /* OLD METHOD - MEMORY ISSUES
-      snprintf(buff, 16, "Rest %2i -> %-2i/%2i ", roundCur, roundCur + 1, roundMax);
-      lcd.print(buff);
-      */
       lcd.print("Rest ");
       lcd.print(roundCur);
       lcd.print(" -> ");
@@ -467,10 +445,6 @@ void displayState() {
       
       break;
     case STATE_ROUND_PAUSE:
-      /* OLD METHOD - MEMORY ISSUES
-      snprintf(buff, 16, "Round %2i / %-2i", roundCur, roundMax);
-      lcd.print(buff);
-      */
       lcd.print("Round ");
       lcd.print(roundCur);
       lcd.print(" / ");
@@ -482,10 +456,6 @@ void displayState() {
       lcd.print("PAUSED");
       break;
     case STATE_REST_PAUSE:
-      /* OLD METHOD - MEMORY ISSUES
-      snprintf(buff, 16, "Rest %2i -> %-2i/%2i ", roundCur, roundCur + 1, roundMax);
-      lcd.print(buff);
-      */
       lcd.print("Rest ");
       lcd.print(roundCur);
       lcd.print(" -> ");
