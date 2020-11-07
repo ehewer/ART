@@ -1,6 +1,7 @@
 /*
- * Arduino Round Timer (ART)
+ * Arduino Round Timer (ART) v1.0.1
  * Created by Elijah Hewer
+ * https://www.linkedin.com/in/elijahhewer/
  * 
  * November 2020
  */
@@ -24,7 +25,6 @@ LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 
 // buzzer pin
 const int buzPin = 9;
-bool buz_state = false;
 
 // pot pin (analogue)
 const int potPin = 0;
