@@ -1,5 +1,5 @@
 # ART (Arduino Round Timer)
-ART is a personal project to create a simple yet versatile round timer for interval activities like boxing, muay thai, tabata, HIIT, etc.
+ART is a personal project to create a simple yet versatile round timer for interval activities like boxing, muay thai, Tabata, HIIT, etc.
 
 ![ART Image](./images/20201106_233717.jpg)
 
@@ -57,7 +57,7 @@ Optionally, you can replace the power supply with a portable power source like a
 ## Wiring diagram
 Coming soon!
 
-## Vs. Current products on the market
+## vs. Current products on the market
 ### [Rival Gym Timer](https://www.rivalboxing.ca/products/rival-gym-timer-1)
 - Much more expensive: $140 CAD
 - Less round duration options: only 1, 2, and 3 minutes
@@ -72,4 +72,4 @@ Coming soon!
 - Taking over the UFC Performance Institute?
 
 ## License
-MIT © Elijah Hewer
+MIT © [Elijah Hewer](https://www.linkedin.com/in/elijahhewer/)
